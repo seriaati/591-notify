@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import argparse
+import os
 
+from dotenv import load_dotenv
 from loguru import logger
 from playwright.sync_api import sync_playwright
 
 from src import get_houses, line_notify, load_db, save_to_db
 
-parser = argparse.ArgumentParser(description="591 House Scraper")
-parser.add_argument("--token", type=str, help="Line Notify Token")
-parser.add_argument("--url", type=str, help="591 House URL", required=True)
-args = parser.parse_args()
+load_dotenv()
 
-token = args.token
-url = args.url
+token = os.getenv("LINE_NOTIFY_TOKEN")
+url = os.environ["URL"]
 
 
 def main() -> None:
