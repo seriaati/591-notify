@@ -23,10 +23,10 @@ def block_ads(route: pw.Route) -> None:
         route.continue_()
 
 
-def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
+def get_houses(playwright: pw.Playwright, *, url: str, headless: bool) -> list[House]:
     result: list[House] = []
 
-    browser = playwright.chromium.launch(headless=False)
+    browser = playwright.chromium.launch(headless=headless)
     page = browser.new_page()
     page.route("**/*", block_ads)
     page.goto(url)
