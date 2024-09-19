@@ -1,57 +1,56 @@
-# type: ignore[reportOptionalMemberAccess]
+# pyright: reportOptionalMemberAccess=false
+
 from __future__ import annotations
 
-import time
-from typing import Any
+from typing import TYPE_CHECKING
 
-import requests
-from fake_useragent import UserAgent
+import fake_useragent
 
 from .schema import House
 
-ua = UserAgent()
+if TYPE_CHECKING:
+    from playwright import sync_api as pw
+
+__all__ = ("get_houses",)
+
+ua = fake_useragent.UserAgent()
 
 
-def request_api() -> dict[str, Any]:
-    url = "https://sale.591.com.tw/home/search/list-v2"
-    params = {
-        "type": "2",
-        "category": "1",
-        "shType": "list",
-        "regionid": "17",
-        "metro": "238",
-        "station": "4335,4337,4341,4342,4343",
-        "price": "1000_1250",
-        "pattern": "2",
-        "label": "1",
-        "firstRow": "0",
-        "totalRows": "30",
-        "timestamp": str(int(time.time())),
-        "recom_community": "1",
-    }
-    headers = {
-        "deviceid": "0o638nm825bkmivmtgfrqgr068",
-        "x-csrf-token": "HDVfC8UwP2TzH315smtr6VGAx3Lz36RDhblWlV7j",
-        "user-agent": ua.random,
-        "accept": "application/json, text/javascript, */*; q=0.01",
-        "referer": "https://sale.591.com.tw",
-        "cookie": "webp=1; PHPSESSID=0o638nm825bkmivmtgfrqgr068; urlJumpIp=17; T591_TOKEN=0o638nm825bkmivmtgfrqgr068; _ga=GA1.3.1269950595.1723439809; _gid=GA1.3.1037545579.1723439809; _gat=1; 591_new_session=eyJpdiI6IlJuZWNZTU1PckJWemwvMVU4eGx0UXc9PSIsInZhbHVlIjoiOEs0Tk12MnpKNHRPT2k0TE5KU1Q3dWtkTW45K1dTY2dnT0FvRzJabnRReEFYSFBFM1lWc0ZERXk3VjdqdEFCY1A4bnJEWC81L0dDSHBsRExoU08yUUF1eTZ4RTFzOThKTVZUL0tiNDFmUVNrVXNkRkx2Y0RVYklvT2JiSU10UjciLCJtYWMiOiIxNDIxZDExMjAyZjcxNjRiNDU3ZjEzYjU3MzgzOGUzNWUxOTlkNjhlNDAyYThkMDhhMmMwOTk0N2U1MGYyODdiIiwidGFnIjoiIn0%3D; tw591__privacy_agree=0; _gcl_au=1.1.930892459.1723439810",
-    }
-    return requests.get(url, headers=headers, params=params).json()
+def block_ads(route: pw.Route) -> None:
+    if route.request.resource_type == "image" and "ad" in route.request.url:
+        route.abort()
+    else:
+        route.continue_()
 
 
-def fetch_houses() -> list[House]:
-    data = request_api()
-    houses: list[House] = []
-    added_names: set[str] = set()
-    for house in data["data"]["house_list"]:
-        name = house["title"]
-        if name in added_names:
-            continue
-        house_id = house["houseid"]
-        url = house.get(
-            "event_show_url", f"https://sale.591.com.tw/home/house/detail/2/{house_id}.html"
+def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
+    result: list[House] = []
+
+    browser = playwright.chromium.launch(headless=False)
+    page = browser.new_page()
+    page.route("**/*", block_ads)
+    page.goto(url)
+
+    houses = page.query_selector_all("div.houseList-item")
+
+    for house in houses:
+        price = house.query_selector(".houseList-item-price").inner_text()
+        unit_price = house.query_selector(".houseList-item-unitprice").inner_text()
+
+        title_element = house.query_selector(".houseList-item-title")
+        title = title_element.inner_text()
+
+        house_url = (
+            house.query_selector(".houseList-item-title").query_selector("a").get_attribute("href")
         )
-        houses.append(House(name=name, url=url))
-        added_names.add(name)
-    return houses
+        if house_url is None:
+            continue
+        house_url = "https://sale.591.com.tw" + house_url
+
+        house_id = house_url.split("/")[-1].split(".")[0]
+
+        result.append(
+            House(title=title, url=house_url, id=house_id, price=price, unit_price=unit_price)
+        )
+
+    return result

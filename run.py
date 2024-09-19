@@ -1,44 +1,51 @@
+from __future__ import annotations
+
 import argparse
-import pathlib
-import time
+from typing import Final
 
 from loguru import logger
+from playwright.sync_api import sync_playwright
 
-from src.database import load_posts, save_posts
-from src.scraper import fetch_houses
-from src.utils import line_notify
+from src import get_houses, line_notify, load_db, save_to_db
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--token",
-    type=str,
-    required=True,
-    help="Line Notify token",
-)
+MAX_TRIES: Final[int] = 3
+
+parser = argparse.ArgumentParser(description="591 House Scraper")
+parser.add_argument("--token", type=str, help="Line Notify Token")
+parser.add_argument("--url", type=str, help="591 House URL", required=True)
 args = parser.parse_args()
+
+token = args.token
+url = args.url
 
 
 def main() -> None:
-    logger.info("Start scraping")
-    file_path = pathlib.Path("houses.json")
+    logger.info("Starting 591 House Scraper")
 
-    houses = fetch_houses()
+    with sync_playwright() as p:
+        houses = get_houses(p, url=url)
+
     logger.info(f"Found {len(houses)} houses")
 
-    current_houses = load_posts(file_path)
-    logger.info(f"Found {len(current_houses)} houses in database")
+    current_houses = load_db(url)
+    logger.info(f"Loaded {len(current_houses)} houses from database")
 
-    saved_houses = save_posts(houses, current_houses, file_path)
-    logger.info(f"Saved {len(saved_houses)} houses")
+    saved_houses = save_to_db(url, objs_to_save=houses, current_objs=current_houses)
+    logger.info(f"Saved {len(saved_houses)} new houses to database")
 
     for house in saved_houses:
-        line_notify(f"\n發現新標的!\n{house.name}\n{house.url}", token=args.token)
+        logger.info(f"New House: {house}")
+        if token is not None:
+            line_notify(token, message=house.display)
 
-    logger.info("Scraping finished")
+    logger.info("591 House Scraper Finished")
 
 
 if __name__ == "__main__":
-    logger.add("log.log", rotation="1 day", retention="7 days", level="INFO")
-    start = time.time()
-    main()
-    logger.info(f"Execution time: {time.time() - start:.2f} seconds")
+    try:
+        main()
+    except Exception as e:
+        logger.exception(e)
+
+        if token is not None:
+            line_notify(token, message=f"\n出錯: {e}")

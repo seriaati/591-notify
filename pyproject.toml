@@ -1,26 +1,16 @@
-[tool.poetry]
-authors = ["seria <seria.ati@gmail.com>"]
-description = "591 爬蟲"
-license = "GPL-3.0-only"
-name = "591-scrape"
-package-mode = false
+[project]
+dependencies = [
+  "fake-useragent>=1.5.1",
+  "loguru>=0.7.2",
+  "playwright>=1.47.0",
+  "pydantic>=2.9.2",
+  "requests>=2.32.3",
+]
+description = "Add your description here"
+name = "591-notify"
 readme = "README.md"
+requires-python = ">=3.12"
 version = "0.1.0"
 
-[tool.poetry.dependencies]
-loguru = "^0.7.2"
-python = "^3.11"
-python-dotenv = "^1.0.1"
-requests = "^2.32.3"
-pydantic = "^2.8.2"
-fake-useragent = "^1.5.1"
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.5.7"
-
-[build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core"]
+[tool.pyright]
+typeCheckingMode = "standard"
