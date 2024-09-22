@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import time
 from typing import TYPE_CHECKING
 
 import fake_useragent
@@ -26,11 +28,22 @@ def block_ads(route: pw.Route) -> None:
 def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
     result: list[House] = []
 
-    browser = playwright.chromium.launch(headless=False)
+    browser = playwright.chromium.launch(
+        headless=True,
+        proxy={
+            "server": os.environ["PROXY_SERVER"],
+            "username": os.environ["PROXY_USERNAME"],
+            "password": os.environ["PROXY_PASSWORD"],
+        },
+    )
     page = browser.new_page()
     page.route("**/*", block_ads)
     page.goto(url)
+    page.wait_for_load_state("domcontentloaded")
 
+    time.sleep(5)
+
+    page.get_by_text("All Rights reserved.").click()
     houses = page.query_selector_all("div.houseList-item")
 
     for house in houses:
