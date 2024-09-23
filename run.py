@@ -22,10 +22,10 @@ def main() -> None:
 
     logger.info(f"Found {len(houses)} houses")
 
-    current_houses = load_db(url)
+    current_houses = load_db()
     logger.info(f"Loaded {len(current_houses)} houses from database")
 
-    saved_houses = save_to_db(url, objs_to_save=houses, current_objs=current_houses)
+    saved_houses = save_to_db(objs_to_save=houses, current_objs=current_houses)
     logger.info(f"Saved {len(saved_houses)} new houses to database")
 
     for house in saved_houses:
