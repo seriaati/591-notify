@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import TYPE_CHECKING
 
-import fake_useragent
 from loguru import logger
 
 from .schema import House
@@ -14,15 +14,6 @@ if TYPE_CHECKING:
     from playwright import sync_api as pw
 
 __all__ = ("get_houses",)
-
-ua = fake_useragent.UserAgent()
-
-
-def block_ads(route: pw.Route) -> None:
-    if route.request.resource_type == "image" and "ad" in route.request.url:
-        route.abort()
-    else:
-        route.continue_()
 
 
 def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
@@ -37,7 +28,6 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
         },
     )
     page = browser.new_page()
-    page.route("**/*", block_ads)
     page.goto(url)
 
     added_house_ids = set()
@@ -77,14 +67,22 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
             added_house_ids.add(house_id)
             added_house_titles.add(title)
 
-        next_button = page.query_selector(".pageNext")
-        href = next_button.get_attribute("href")
+        next_button = page.query_selector("a.pageNext")
 
-        if href and next_button.is_enabled() and next_button.is_visible():
-            logger.info("Going to next page")
+        if next_button is None:
+            logger.info("Cannot find next button, stopping")
+            break
+
+        if "last" in (next_button.get_attribute("class") or ""):
+            logger.info("Last page reached, stopping")
+            break
+
+        try:
+            logger.info("Navigating to next page")
             next_button.click()
-        else:
-            logger.info("No more pages")
+            time.sleep(2)
+        except Exception as e:
+            logger.error(f"Error clicking next button: {e}")
             break
 
     return result
