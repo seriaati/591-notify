@@ -29,10 +29,13 @@ def main() -> None:
     saved_houses = save_to_db(objs_to_save=houses, current_objs=current_houses)
     logger.info(f"Saved {len(saved_houses)} new houses to database")
 
-    for house in saved_houses:
-        logger.info(f"New House: {house}")
-        if token is not None:
-            line_notify(token, message=house.display)
+    if not current_houses:
+        logger.info("First run, no notification sent")
+    else:
+        for house in saved_houses:
+            logger.info(f"New House: {house}")
+            if token is not None:
+                line_notify(token, message=house.display)
 
     logger.info("591 House Scraper Finished")
 
