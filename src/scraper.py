@@ -35,7 +35,7 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
 
     while True:
         page.wait_for_load_state("networkidle")
-        page.click("All Rights reserved.")
+        page.get_by_text("All Rights reserved.").click()
 
         houses = page.query_selector_all("div.houseList-item")
 
