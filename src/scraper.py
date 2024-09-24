@@ -69,19 +69,20 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
             added_house_ids.add(house_id)
             added_house_titles.add(title)
 
-        next_button = page.query_selector("a.pageNext")
+        next_a = page.query_selector("a.pageNext")
+        next_span = page.query_selector("span:has-text('下一頁')")
 
-        if next_button is None:
+        if next_a is None:
             logger.info("Cannot find next button, stopping")
             break
 
-        if "last" in (next_button.get_attribute("class") or ""):
+        if "last" in (next_a.get_attribute("class") or ""):
             logger.info("Last page reached, stopping")
             break
 
         try:
             logger.info("Navigating to next page")
-            next_button.click()
+            next_span.click()
             time.sleep(2)
         except Exception as e:
             logger.error(f"Error clicking next button: {e}")
