@@ -16,6 +16,7 @@ url = os.environ["URL"]
 
 def main() -> None:
     logger.info("Starting 591 House Scraper")
+    logger.info(f"URL: {url}")
 
     with sync_playwright() as p:
         houses = get_houses(p, url=url)

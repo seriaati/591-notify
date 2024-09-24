@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import os
-import time
 from typing import TYPE_CHECKING
 
 import fake_useragent
+from loguru import logger
 
 from .schema import House
 
@@ -39,31 +39,52 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
     page = browser.new_page()
     page.route("**/*", block_ads)
     page.goto(url)
-    page.wait_for_load_state("domcontentloaded")
 
-    time.sleep(5)
+    added_house_ids = set()
+    added_house_titles = set()
 
-    page.get_by_text("All Rights reserved.").click()
-    houses = page.query_selector_all("div.houseList-item")
+    while True:
+        page.wait_for_load_state("networkidle")
+        houses = page.query_selector_all("div.houseList-item")
 
-    for house in houses:
-        price = house.query_selector(".houseList-item-price").inner_text()
-        unit_price = house.query_selector(".houseList-item-unitprice").inner_text()
+        for house in houses:
+            try:
+                price = house.query_selector(".houseList-item-price").inner_text().strip()
+                unit_price = house.query_selector(".houseList-item-unitprice").inner_text().strip()
 
-        title_element = house.query_selector(".houseList-item-title")
-        title = title_element.inner_text()
+                title_element = house.query_selector(".houseList-item-title")
+                title = title_element.inner_text().strip()
 
-        house_url = (
-            house.query_selector(".houseList-item-title").query_selector("a").get_attribute("href")
-        )
-        if house_url is None:
-            continue
-        house_url = "https://sale.591.com.tw" + house_url
+                house_url = (
+                    house.query_selector(".houseList-item-title")
+                    .query_selector("a")
+                    .get_attribute("href")
+                )
+                if house_url is None:
+                    continue
+                house_url = "https://sale.591.com.tw" + house_url
 
-        house_id = house_url.split("/")[-1].split(".")[0]
+                house_id = house_url.split("/")[-1].split(".")[0]
+            except AttributeError:
+                continue
 
-        result.append(
-            House(title=title, url=house_url, id=house_id, price=price, unit_price=unit_price)
-        )
+            if house_id in added_house_ids or title in added_house_titles:
+                continue
+
+            result.append(
+                House(title=title, url=house_url, id=house_id, price=price, unit_price=unit_price)
+            )
+            added_house_ids.add(house_id)
+            added_house_titles.add(title)
+
+        next_button = page.query_selector(".pageNext")
+        href = next_button.get_attribute("href")
+
+        if href and next_button.is_enabled() and next_button.is_visible():
+            logger.info("Going to next page")
+            next_button.click()
+        else:
+            logger.info("No more pages")
+            break
 
     return result

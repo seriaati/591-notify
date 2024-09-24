@@ -21,7 +21,13 @@ def load_db() -> list[House]:
 
 def save_to_db(objs_to_save: list[House], current_objs: list[House]) -> list[House]:
     current_obj_ids = {obj.id for obj in current_objs}
-    objs_to_save = [obj for obj in objs_to_save if obj.id not in current_obj_ids]
+    current_obj_titles = {obj.title for obj in current_objs}
+
+    objs_to_save = [
+        obj
+        for obj in objs_to_save
+        if obj.id not in current_obj_ids and obj.title not in current_obj_titles
+    ]
     current_objs.extend(objs_to_save)
 
     with DB_PATH.open("w", encoding="utf-8") as f:
