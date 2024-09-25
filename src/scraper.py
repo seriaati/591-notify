@@ -82,8 +82,8 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
 
         try:
             logger.info("Navigating to next page")
+            time.sleep(5)
             next_span.click()
-            time.sleep(2)
         except Exception as e:
             logger.error(f"Error clicking next button: {e}")
             break
