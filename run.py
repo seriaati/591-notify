@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -11,14 +10,14 @@ from src import get_houses, line_notify, load_db, save_to_db
 
 parser = argparse.ArgumentParser(description="591 House Scraper")
 parser.add_argument("--url", type=str, help="URL to scrape", required=True)
-parser.add_argument("--notify", action="store_true", help="Send notification to LINE")
+parser.add_argument("--token", type=str, help="LINE Notify token", required=False)
 
 args = parser.parse_args()
 
 load_dotenv()
 
-token = os.getenv("LINE_NOTIFY_TOKEN")
 url = args.url
+token = args.token
 
 
 def main() -> None:
@@ -39,10 +38,10 @@ def main() -> None:
 
     if first_run:
         logger.info("First run, no notification sent")
-    else:
+    elif token:
+        logger.info("Sending LINE Notify")
         for house in saved_houses:
-            if token is not None and args.notify:
-                line_notify(token, message=house.display)
+            line_notify(token, message=house.display)
 
     logger.info("591 House Scraper Finished")
 

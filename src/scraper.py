@@ -18,14 +18,16 @@ __all__ = ("get_houses",)
 def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
     result: list[House] = []
 
-    browser = playwright.chromium.launch(
-        headless=True,
-        proxy={
+    if os.getenv("PROXY_SERVER") and os.getenv("PROXY_USERNAME") and os.getenv("PROXY_PASSWORD"):
+        proxy = {
             "server": os.environ["PROXY_SERVER"],
             "username": os.environ["PROXY_USERNAME"],
             "password": os.environ["PROXY_PASSWORD"],
-        },
-    )
+        }
+    else:
+        proxy = None
+
+    browser = playwright.chromium.launch(headless=True, proxy=proxy)  # pyright: ignore[reportArgumentType]
     page = browser.new_page()
     page.goto(url)
 
@@ -61,9 +63,7 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
             if house_id in added_house_ids or title in added_house_titles:
                 continue
 
-            result.append(
-                House(title=title, url=house_url, id=house_id, unit_price=unit_price)
-            )
+            result.append(House(title=title, url=house_url, id=house_id, unit_price=unit_price))
             added_house_ids.add(house_id)
             added_house_titles.add(title)
 
