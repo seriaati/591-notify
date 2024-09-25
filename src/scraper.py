@@ -40,8 +40,7 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
 
         for house in houses:
             try:
-                price = house.query_selector(".houseList-item-price").inner_text().strip()
-                unit_price = house.query_selector(".houseList-item-unitprice").inner_text().strip()
+                unit_price = house.query_selector(".houseList-item-unitprice").inner_text()
 
                 title_element = house.query_selector(".houseList-item-title")
                 title = title_element.inner_text().strip()
@@ -63,7 +62,7 @@ def get_houses(playwright: pw.Playwright, *, url: str) -> list[House]:
                 continue
 
             result.append(
-                House(title=title, url=house_url, id=house_id, price=price, unit_price=unit_price)
+                House(title=title, url=house_url, id=house_id, unit_price=unit_price)
             )
             added_house_ids.add(house_id)
             added_house_titles.add(title)
